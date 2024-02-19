@@ -1,0 +1,120 @@
+openapi: '3.0.2'
+info:
+  version: '1.0'
+  title: 'axp-data-api'
+
+x-amazon-apigateway-request-validators:
+  all:
+    validateRequestBody: true
+    validateRequestParameters: true
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true
+
+components:
+  securitySchemes:
+    data-api-authoriser:
+      type: 'apiKey'
+      name: 'Authorization'
+      in: "header"
+      x-amazon-apigateway-authtype: 'custom'
+      x-amazon-apigateway-authorizer:
+        type: 'token'
+        authorizerUri:
+         Fn::Sub: 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${authoriserLambda.Arn}/invocations'
+        authorizerCredentials:
+          Fn::GetAtt: [apiRole, Arn]
+        authorizerResultTtlInSeconds: 0
+
+security:
+  - 'data-api-authoriser': []
+
+paths:
+  /v1/listing/statistics/{adId}/dateRange/{startDateParam}/{endDateParam}:
+    get:
+      summary: 'Get full statistic report for a listing'
+      parameters:
+        - name: adId
+          in: path
+          required: true
+          description: The ID of the advertisement/listing
+          schema:
+            type: string
+            maxLength: 100
+            pattern: "^[A-Za-z0-9]+$"
+          additionalProperties: false
+        - name: startDateParam
+          in: path
+          required: true
+          description: The start date of the date range # Formatted as "DD-MM-YYYY"
+          schema:
+            type: string
+            maxLength: 10
+            pattern: "^[0-9-]+$"
+        - name: endDateParam
+          in: path
+          required: true
+          description: The end date of the date range # Formatted as "DD-MM-YYYY"
+          schema:
+            type: string
+            maxLength: 10
+            pattern: "^[0-9-]+$"
+        # Three optional parameters
+        - name: product
+          in: query
+          required: false
+          description: Type of listings or project
+          schema:
+            type: string
+            maxLength: 100
+            pattern: "^[A-Za-z ]+$"
+        - name: source
+          in: query
+          required: false
+          description: 'Option of domain, cre or allhomes. Default to domain'
+          schema:
+            type: string
+            maxLength: 100
+            pattern: "^[A-Za-z]+$"
+        - name: channel
+          in: query
+          required: false
+          description: 'Option of business, commercial or residential. Default to residential'
+          schema:
+            type: string
+            maxLength: 100
+            pattern: "^[A-Za-z]+$"
+      responses:
+        default:
+          statusCode: "200"
+        200:
+          description: 'TODO'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    pattern: "^[0-9-]+$"
+                    maxLength: 10
+                  name:
+                    type: string
+                    pattern: "^[0-9-]+$"
+                    maxLength: 10
+                additionalProperties: false
+              additionalProperties: false
+        
+      x-amazon-apigateway-integration:
+        httpMethod: 'POST'
+        uri:
+          Fn::Sub: 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${listingStatistic.Arn}/invocations'
+        credentials:
+          Fn::GetAtt: [apiRole, Arn]
+        responses:
+          default:
+            statusCode: '200'
+        passthroughBehavior: 'when_no_match'
+        type: 'aws_proxy'
+      security:
+        - 'data-api-authoriser': []
